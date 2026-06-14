@@ -17,7 +17,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:/
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # ── Database ──────────────────────────────────────────────
-from models import db, User
+from models import db, User, Document
 db.init_app(app)
 
 # ── Login manager ─────────────────────────────────────────
@@ -37,8 +37,8 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(settings_bp)
 
 # ── Paths ─────────────────────────────────────────────────
-KB_DIR = Path(__file__).parent / "raw"
-IMAGES_DIR = Path(__file__).parent / "images"
+UPLOADS_DIR = Path(__file__).parent / "uploads"
+UPLOADS_DIR.mkdir(exist_ok=True)
 LOGS_DIR = Path(__file__).parent / "query-logs"
 LOGS_DIR.mkdir(exist_ok=True)
 
@@ -54,25 +54,22 @@ def get_gemini_client(api_key: str):
 
 # ── Retrieval ─────────────────────────────────────────────
 
-def load_all_docs() -> list[dict]:
-    """Complete mode — send full docs, zero retrieval bugs."""
+def load_all_docs(org_id: int) -> list[dict]:
+    """Complete mode — send all org docs, zero retrieval bugs."""
     docs = []
-    for md_file in sorted(KB_DIR.glob("*.md")):
-        try:
-            content = md_file.read_text(encoding="utf-8")
+    for doc in Document.query.filter_by(org_id=org_id).order_by(Document.uploaded_at).all():
+        if doc.extracted_text:
             docs.append({
-                "source": md_file.stem.replace("_", " "),
-                "filename": md_file.name,
-                "content": content,
+                "source": doc.original_name,
+                "doc_id": doc.id,
+                "content": doc.extracted_text,
                 "_top_score": 999,
             })
-        except Exception:
-            pass
     return docs
 
 
-def search_docs(query: str) -> list[dict]:
-    """Precision mode — extract and rank relevant sections."""
+def search_docs(query: str, org_id: int) -> list[dict]:
+    """Precision mode — extract and rank relevant sections from org docs."""
     STOP = {"the","and","but","for","with","from","onto","into","that","this",
             "are","was","were","have","has","had","not","you","can","will",
             "its","our","your","their","when","then","also","any","all","both",
@@ -92,12 +89,11 @@ def search_docs(query: str) -> list[dict]:
     table_row_re = re.compile(r'^\s*\|')
 
     results = []
-    for md_file in KB_DIR.glob("*.md"):
-        try:
-            lines = md_file.read_text(encoding="utf-8").splitlines()
-        except Exception:
+    for doc in Document.query.filter_by(org_id=org_id).all():
+        if not doc.extracted_text:
             continue
 
+        lines = doc.extracted_text.splitlines()
         match_lines = [i for i, l in enumerate(lines) if regex.search(l)]
         if not match_lines:
             continue
@@ -144,8 +140,8 @@ def search_docs(query: str) -> list[dict]:
                 relevant = [text for _, _, text in scored_sections[:3]]
             combined = "\n\n---\n\n".join(relevant)
             results.append({
-                "source": md_file.stem.replace("_", " "),
-                "filename": md_file.name,
+                "source": doc.original_name,
+                "doc_id": doc.id,
                 "content": combined,
                 "_top_score": scored_sections[0][0],
             })
@@ -245,12 +241,6 @@ def index():
     return send_from_directory("static", "index.html")
 
 
-@app.route("/images/<path:filename>")
-@login_required
-def serve_image(filename):
-    return send_from_directory(str(IMAGES_DIR), filename)
-
-
 @app.route("/api/generate", methods=["POST"])
 @login_required
 def generate():
@@ -265,11 +255,16 @@ def generate():
     if not org.api_key:
         return jsonify({"error": "No API key configured. Your admin needs to add one in Settings."}), 400
 
+    # Check docs exist
+    doc_count = Document.query.filter_by(org_id=org.id).count()
+    if doc_count == 0:
+        return jsonify({"error": "No documents uploaded yet. Your admin needs to upload knowledge base documents in Settings."}), 404
+
     # Retrieval
     if org.retrieval_mode == "precision":
-        chunks = search_docs(query)
+        chunks = search_docs(query, org.id)
     else:
-        chunks = load_all_docs()
+        chunks = load_all_docs(org.id)
 
     if not chunks:
         return jsonify({"error": "No relevant content found in the knowledge base."}), 404
@@ -307,15 +302,6 @@ def me():
         "role": current_user.role,
         "org": current_user.organization.name,
     })
-
-
-@app.route("/api/search-only", methods=["POST"])
-@login_required
-def search_only():
-    data = request.get_json()
-    query = data.get("query", "").strip()
-    chunks = search_docs(query)
-    return jsonify({"chunks": [{"source": c["source"], "top_score": c.get("_top_score"), "preview": c["content"][:300]} for c in chunks]})
 
 
 @app.route("/api/logs")

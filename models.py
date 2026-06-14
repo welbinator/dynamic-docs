@@ -20,6 +20,7 @@ class Organization(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     users = db.relationship("User", backref="organization", lazy=True)
+    documents = db.relationship("Document", backref="organization", lazy=True, cascade="all, delete-orphan")
 
     @staticmethod
     def generate_invite_code():
@@ -51,3 +52,16 @@ class User(UserMixin, db.Model):
     @property
     def is_admin(self):
         return self.role == "admin"
+
+
+class Document(db.Model):
+    __tablename__ = "documents"
+
+    id = db.Column(db.Integer, primary_key=True)
+    org_id = db.Column(db.Integer, db.ForeignKey("organizations.id"), nullable=False)
+    original_name = db.Column(db.String(256), nullable=False)
+    stored_name = db.Column(db.String(256), nullable=False)   # UUID-based safe filename
+    file_type = db.Column(db.String(16), nullable=False)      # pdf | docx | doc | txt | md
+    file_size = db.Column(db.Integer, nullable=False, default=0)
+    extracted_text = db.Column(db.Text, nullable=True)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
