@@ -241,6 +241,14 @@ def index():
     return send_from_directory("static", "index.html")
 
 
+IMAGES_DIR = Path(__file__).parent / "images"
+
+@app.route("/images/<path:filename>")
+@login_required
+def serve_image(filename):
+    return send_from_directory(str(IMAGES_DIR), filename)
+
+
 @app.route("/api/generate", methods=["POST"])
 @login_required
 def generate():
