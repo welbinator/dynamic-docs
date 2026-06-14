@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Create Account — Dynamic Docs{% endblock %}
+{% block body %}
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <h1>Create your account</h1>
+    <p class="subtitle">You'll be the admin for your organization.</p>
+
+    {% if error %}
+    <div class="error-msg">{{ error }}</div>
+    {% endif %}
+
+    <form method="post">
+      <div class="form-group">
+        <label for="org_name">Organization name</label>
+        <input type="text" id="org_name" name="org_name" required autofocus placeholder="e.g. CDLATM Inc." value="{{ request.form.get('org_name', '') }}" />
+      </div>
+      <div class="form-group">
+        <label for="name">Your name</label>
+        <input type="text" id="name" name="name" required autocomplete="name" placeholder="Jane Smith" value="{{ request.form.get('name', '') }}" />
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" value="{{ request.form.get('email', '') }}" />
+      </div>
+      <div class="form-group">
+        <label for="password">Password <span style="color:var(--muted);font-weight:400">(min 8 chars)</span></label>
+        <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="••••••••" />
+      </div>
+      <button type="submit" class="btn-primary">Create account</button>
+    </form>
+
+    <div class="auth-footer">
+      Already have an account? <a href="/login">Sign in</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

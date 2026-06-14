@@ -18,24 +18,26 @@ env/
 *.enc
 *.key
 
-# Query logs (runtime output — not source code)
+# Database
+*.db
+*.sqlite3
+
+# Query logs (runtime output)
 query-logs/
 
-# Raw extracted markdown (large binary-adjacent files, not source)
-# Comment this out if you want them tracked
+# Raw extracted markdown
 raw/
 
-# Chunked markdown (generated from raw/)
-# Comment this out if you want them tracked
+# Chunked markdown (generated)
 chunks/
 
-# AI knowledge base (generated from chunks/)
+# AI knowledge base (generated)
 ai-kb/
 
 # Images extracted from PDFs
 images/
 
-# Human-facing generated docs (generated output)
+# Human-facing generated docs
 human-docs/
 
 # Test/prototype pages

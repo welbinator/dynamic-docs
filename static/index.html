@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CDLATM Field Docs</title>
+<title>Dynamic Docs</title>
 <style>
   :root {
     --bg: #0f1117;
@@ -474,12 +474,23 @@
 <body>
 
 <header>
-  <div class="logo">CDLATM <span>Field Docs</span></div>
+  <div class="logo">Dynamic <span>Docs</span></div>
+  <div id="header-right" style="display:flex;align-items:center;gap:14px;font-size:0.88rem;color:var(--muted);">
+    <span id="header-email" style="color:var(--text)"></span>
+    <a id="header-settings" href="/settings" style="color:var(--muted);text-decoration:none;display:none">Settings</a>
+    <form action="/logout" method="post" style="margin:0">
+      <button type="submit" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:0.82rem;font-family:var(--font);transition:border-color 0.15s,color 0.15s"
+        onmouseover="this.style.borderColor='#e74c3c';this.style.color='#e74c3c'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+        Log out
+      </button>
+    </form>
+  </div>
 </header>
 
 <div class="hero">
   <h1>Field Service Knowledge Base</h1>
-  <p>Ask any question about ATM service, programming, maintenance, or procedures — get a complete documentation page instantly.</p>
+  <p>Ask any question about your service documentation — get a complete documentation page instantly.</p>
 
   <div class="search-box">
     <input type="text" id="query-input" placeholder="e.g. How do I program a 5300 ATM?" autofocus />
@@ -517,6 +528,15 @@
   const output = document.getElementById('doc-output');
   const queryDisplay = document.getElementById('query-display');
   const sourceChips = document.getElementById('source-chips');
+
+  // Populate header with logged-in user info
+  fetch('/api/me').then(r => r.json()).then(user => {
+    document.getElementById('header-email').textContent = user.email;
+    if (user.role === 'admin') {
+      document.getElementById('header-settings').style.display = 'inline';
+    }
+  }).catch(() => {});
+
 
   // Post-process the HTML Gemini returns to fix structural issues:
   // 1. Bare text nodes inside .step-item get wrapped in <p> so grid column 2 applies

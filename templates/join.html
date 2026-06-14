@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Join {{ org.name if org else 'Team' }} — Dynamic Docs{% endblock %}
+{% block body %}
+<div class="auth-wrapper">
+  <div class="auth-card">
+    {% if not org %}
+      <h1>Invalid invite link</h1>
+      <p class="subtitle">This invite link is no longer valid. Ask your admin to send you a new one.</p>
+      <div class="auth-footer"><a href="/login">Back to login</a></div>
+    {% else %}
+      <h1>Join your team</h1>
+      <p class="subtitle">You're joining <span class="org-name">{{ org.name }}</span>.</p>
+
+      {% if error %}
+      <div class="error-msg">{{ error }}</div>
+      {% endif %}
+
+      <form method="post">
+        <div class="form-group">
+          <label for="name">Your name</label>
+          <input type="text" id="name" name="name" required autofocus autocomplete="name" placeholder="Jane Smith" value="{{ request.form.get('name', '') }}" />
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com" value="{{ request.form.get('email', '') }}" />
+        </div>
+        <div class="form-group">
+          <label for="password">Password <span style="color:var(--muted);font-weight:400">(min 8 chars)</span></label>
+          <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="••••••••" />
+        </div>
+        <button type="submit" class="btn-primary">Create account &amp; join</button>
+      </form>
+
+      <div class="auth-footer">
+        Already have an account? <a href="/login">Sign in</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Settings — Dynamic Docs{% endblock %}
+{% block body %}
+<div class="page-wrapper">
+
+  <h1 class="page-title">Settings</h1>
+  <p class="page-subtitle">Manage your organization, AI configuration, and team.</p>
+
+  {% if error %}
+  <div class="error-msg" style="margin-bottom:20px">{{ error }}</div>
+  {% endif %}
+  {% if saved %}
+  <div class="toast">✓ Changes saved.</div>
+  {% endif %}
+
+  <!-- ── ORGANIZATION ── -->
+  <div class="settings-card">
+    <h2>🏢 Organization</h2>
+    <p class="card-desc">The name shown to your team members.</p>
+    <form method="post">
+      <input type="hidden" name="action" value="save_org" />
+      <div class="inline-form">
+        <div class="form-group">
+          <label for="org_name">Organization name</label>
+          <input type="text" id="org_name" name="org_name" value="{{ org.name }}" required />
+        </div>
+        <button type="submit" class="btn-save">Save</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── LLM CONFIGURATION ── -->
+  <div class="settings-card">
+    <h2>🤖 AI Configuration</h2>
+    <p class="card-desc">Choose which AI model powers your doc generation. Your API key is stored securely and never shared.</p>
+    <form method="post" id="llm-form">
+      <input type="hidden" name="action" value="save_llm" />
+
+      <div class="form-group">
+        <label for="provider">Provider</label>
+        <select id="provider" name="provider" onchange="updateModelDefault(this.value)">
+          <option value="gemini" {% if org.llm_provider == 'gemini' %}selected{% endif %}>Google Gemini</option>
+          <option value="openai" {% if org.llm_provider == 'openai' %}selected{% endif %}>OpenAI (coming soon)</option>
+          <option value="anthropic" {% if org.llm_provider == 'anthropic' %}selected{% endif %}>Anthropic (coming soon)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="model">Model</label>
+        <input type="text" id="model" name="model" value="{{ org.llm_model }}" required placeholder="e.g. gemini-2.5-flash" />
+      </div>
+
+      <div class="form-group">
+        <label for="api_key">API Key</label>
+        <input type="password" id="api_key" name="api_key" placeholder="{% if org.api_key %}Leave blank to keep existing key{% else %}Enter your API key{% endif %}" autocomplete="off" />
+        {% if org.api_key %}
+        <p style="color:var(--muted);font-size:0.78rem;margin-top:4px;">✓ An API key is saved. Enter a new one to replace it.</p>
+        {% endif %}
+      </div>
+
+      <div class="form-group" style="margin-bottom:22px">
+        <label>Retrieval Mode</label>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="retrieval_mode" value="complete" {% if org.retrieval_mode == 'complete' %}checked{% endif %} />
+            <div>
+              <div class="option-label">Complete Mode</div>
+              <div class="option-desc">Sends the full knowledge base with every query — most accurate, uses more tokens.</div>
+            </div>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="retrieval_mode" value="precision" {% if org.retrieval_mode == 'precision' %}checked{% endif %} />
+            <div>
+              <div class="option-label">Precision Mode</div>
+              <div class="option-desc">Extracts relevant sections only — faster and cheaper, may occasionally miss context.</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-save">Save AI settings</button>
+    </form>
+  </div>
+
+  <!-- ── INVITE LINK ── -->
+  <div class="settings-card">
+    <h2>🔗 Team Invite Link</h2>
+    <p class="card-desc">Share this link with employees so they can create an account. Anyone with the link can join your org — if it leaks, generate a new one below to invalidate the old link instantly.</p>
+
+    <div class="invite-row">
+      <div class="invite-url" id="invite-url">{{ invite_url }}</div>
+      <button type="button" class="btn-secondary" onclick="copyInvite()">Copy</button>
+    </div>
+
+    <form method="post" onsubmit="return confirm('This will invalidate the current invite link. Anyone who already has it won\'t be able to use it. Continue?')">
+      <input type="hidden" name="action" value="regenerate_invite" />
+      <button type="submit" class="btn-danger">Generate new link</button>
+    </form>
+  </div>
+
+  <!-- ── TEAM MEMBERS ── -->
+  <div class="settings-card">
+    <h2>👥 Team Members</h2>
+    <p class="card-desc">{{ members | length }} member{{ 's' if members | length != 1 }}.</p>
+
+    <table class="member-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Joined</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in members %}
+        <tr>
+          <td>{{ member.name }}</td>
+          <td style="color:var(--muted)">{{ member.email }}</td>
+          <td><span class="role-badge {{ member.role }}">{{ member.role }}</span></td>
+          <td style="color:var(--muted);font-size:0.82rem">{{ member.created_at.strftime('%b %-d, %Y') }}</td>
+          <td>
+            {% if member.id != current_user.id %}
+            <form method="post" onsubmit="return confirm('Remove {{ member.name }} from the team? They will no longer be able to log in.')">
+              <input type="hidden" name="action" value="remove_user" />
+              <input type="hidden" name="user_id" value="{{ member.id }}" />
+              <button type="submit" class="btn-danger">Remove</button>
+            </form>
+            {% else %}
+            <span style="color:var(--muted);font-size:0.8rem">You</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+const providerDefaults = {{ provider_defaults | tojson }};
+
+function updateModelDefault(provider) {
+  const modelInput = document.getElementById('model');
+  if (providerDefaults[provider]) {
+    modelInput.value = providerDefaults[provider];
+  }
+}
+
+function copyInvite() {
+  const url = document.getElementById('invite-url').textContent.trim();
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = event.target;
+    btn.textContent = 'Copied!';
+    btn.style.color = 'var(--success)';
+    btn.style.borderColor = 'var(--success)';
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 2000);
+  });
+}
+</script>
+{% endblock %}
