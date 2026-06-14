@@ -4,7 +4,7 @@ import json
 import time
 import uuid
 from pathlib import Path
-from flask import Flask, request, jsonify, Response, send_from_directory, redirect, url_for
+from flask import Flask, request, jsonify, Response, send_from_directory, redirect, url_for, render_template
 from flask_login import LoginManager, login_required, current_user
 from dotenv import load_dotenv
 from google import genai
@@ -238,7 +238,7 @@ def stream_llm(prompt: str, provider: str, model: str, api_key: str):
 @app.route("/")
 @login_required
 def index():
-    return send_from_directory("static", "index.html")
+    return render_template("index.html")
 
 
 IMAGES_DIR = Path(__file__).parent / "images"

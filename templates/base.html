@@ -17,7 +17,9 @@
     --danger: #e74c3c;
     --warn: #f39c12;
     --success: #27ae60;
+    --info: #2980b9;
     --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --mono: 'Consolas', 'SF Mono', monospace;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -33,13 +35,14 @@
   header {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 14px 24px;
+    padding: 12px 24px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 12px;
     position: sticky;
     top: 0;
     z-index: 100;
+    min-height: 52px;
   }
   header .logo {
     font-size: 1.15rem;
@@ -48,22 +51,35 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
     text-decoration: none;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   header .logo span { color: var(--muted); font-weight: 400; }
-  header .header-right {
+
+  .header-spacer { flex: 1; }
+
+  .header-right {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
     font-size: 0.88rem;
     color: var(--muted);
+    flex-shrink: 0;
   }
-  header .header-right a {
+  .header-right a {
     color: var(--muted);
     text-decoration: none;
+    white-space: nowrap;
   }
-  header .header-right a:hover { color: var(--text); }
-  header .header-right .user-email { color: var(--text); }
-  header .logout-btn {
+  .header-right a:hover { color: var(--text); }
+  .user-email {
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+  .logout-btn {
     background: transparent;
     border: 1px solid var(--border);
     color: var(--muted);
@@ -73,8 +89,21 @@
     font-size: 0.82rem;
     font-family: var(--font);
     transition: border-color 0.15s, color 0.15s;
+    white-space: nowrap;
   }
-  header .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+  .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+  @media (max-width: 540px) {
+    header { padding: 10px 14px; gap: 8px; }
+    /* hide email on small screens */
+    .user-email { display: none; }
+    /* settings → ⚙ icon */
+    .header-settings-link .btn-text { display: none; }
+    .header-settings-link::before { content: '⚙'; }
+    /* logout → ⏻ icon */
+    .logout-btn .btn-text { display: none; }
+    .logout-btn::after { content: '⏻'; font-size: 1rem; }
+  }
 
   /* ── AUTH CARD ── */
   .auth-wrapper {
@@ -356,14 +385,16 @@
 
 <header>
   <a href="/" class="logo">Dynamic <span>Docs</span></a>
+  <div class="header-spacer"></div>
   <div class="header-right">
     {% if current_user.is_authenticated %}
       <span class="user-email">{{ current_user.email }}</span>
+      {% block header_extra %}{% endblock %}
       {% if current_user.is_admin %}
-        <a href="/settings">Settings</a>
+        <a href="/settings" class="header-settings-link"><span class="btn-text">Settings</span></a>
       {% endif %}
       <form action="/logout" method="post" style="margin:0">
-        <button type="submit" class="logout-btn">Log out</button>
+        <button type="submit" class="logout-btn"><span class="btn-text">Log out</span></button>
       </form>
     {% endif %}
   </div>
