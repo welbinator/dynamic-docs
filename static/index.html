@@ -37,13 +37,14 @@
   header {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 14px 24px;
+    padding: 12px 24px;
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     position: sticky;
     top: 0;
     z-index: 100;
+    min-height: 52px;
   }
   header .logo {
     font-size: 1.15rem;
@@ -51,8 +52,64 @@
     color: var(--accent);
     letter-spacing: 0.04em;
     text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   header .logo span { color: var(--muted); font-weight: 400; }
+
+  /* pushes header-right to the far end */
+  #header-spacer { flex: 1; }
+
+  #header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.88rem;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  #header-email {
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+  }
+  #header-settings {
+    color: var(--muted);
+    text-decoration: none;
+    white-space: nowrap;
+    display: none; /* shown by JS for admins */
+  }
+  #header-logout-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-family: var(--font);
+    transition: border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  #header-logout-btn:hover { border-color: #e74c3c; color: #e74c3c; }
+
+  @media (max-width: 540px) {
+    header { padding: 10px 14px; gap: 8px; }
+    /* hide email entirely on small screens */
+    #header-email { display: none; }
+    /* shorten settings to an icon */
+    #header-settings::before { content: '⚙'; }
+    #header-settings-text { display: none; }
+    /* shorten logout to icon */
+    #header-logout-btn .btn-text { display: none; }
+    #header-logout-btn::after { content: '⏻'; font-size: 1rem; }
+    /* shorten favorites to star only */
+    #fav-toggle-btn .btn-text { display: none; }
+    #fav-toggle-btn::before { content: '★'; }
+  }
+
 
   /* ── HERO / SEARCH ── */
   .hero {
@@ -484,6 +541,10 @@
   }
   #fav-drawer.open { right: 0; }
 
+  @media (max-width: 540px) {
+    #fav-drawer { width: 100vw; right: -100vw; }
+  }
+
   #fav-drawer-header {
     padding: 18px 20px 14px;
     border-bottom: 1px solid var(--border);
@@ -612,16 +673,13 @@
 
 <header>
   <div class="logo">Dynamic <span>Docs</span></div>
-  <div id="header-right" style="display:flex;align-items:center;gap:14px;font-size:0.88rem;color:var(--muted);">
-    <span id="header-email" style="color:var(--text)"></span>
-    <button id="fav-toggle-btn" onclick="toggleDrawer()">★ Favorites</button>
-    <a id="header-settings" href="/settings" style="color:var(--muted);text-decoration:none;display:none">Settings</a>
+  <div id="header-spacer"></div>
+  <div id="header-right">
+    <span id="header-email"></span>
+    <button id="fav-toggle-btn" onclick="toggleDrawer()">★ <span class="btn-text">Favorites</span></button>
+    <a id="header-settings" href="/settings"><span class="btn-text" id="header-settings-text">Settings</span></a>
     <form action="/logout" method="post" style="margin:0">
-      <button type="submit" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:0.82rem;font-family:var(--font);transition:border-color 0.15s,color 0.15s"
-        onmouseover="this.style.borderColor='#e74c3c';this.style.color='#e74c3c'"
-        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
-        Log out
-      </button>
+      <button type="submit" id="header-logout-btn"><span class="btn-text">Log out</span></button>
     </form>
   </div>
 </header>
