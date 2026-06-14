@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CDLATM Field Docs</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2d3250;
+    --accent: #4f7ef7;
+    --accent2: #7c5cbf;
+    --text: #e8eaf6;
+    --muted: #7c83a3;
+    --danger: #e74c3c;
+    --warn: #f39c12;
+    --success: #27ae60;
+    --info: #2980b9;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --mono: 'Consolas', 'SF Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TOP BAR ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header .logo {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  header .logo span { color: var(--muted); font-weight: 400; }
+
+  /* ── HERO / SEARCH ── */
+  .hero {
+    padding: 64px 24px 40px;
+    text-align: center;
+    max-width: 760px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .hero h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p {
+    color: var(--muted);
+    font-size: 1rem;
+    margin-bottom: 32px;
+  }
+
+  .search-box {
+    display: flex;
+    gap: 10px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    transition: border-color 0.2s;
+  }
+  .search-box:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79, 126, 247, 0.15);
+  }
+  .search-box input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 1.05rem;
+    font-family: var(--font);
+  }
+  .search-box input::placeholder { color: var(--muted); }
+  .search-box button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 22px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .search-box button:hover { background: #3a67e0; }
+  .search-box button:active { transform: scale(0.97); }
+  .search-box button:disabled { background: var(--muted); cursor: not-allowed; }
+
+  /* example queries */
+  .examples {
+    margin-top: 14px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .example-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .example-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── RESULT AREA ── */
+  #result-wrapper {
+    max-width: 920px;
+    margin: 0 auto 60px;
+    width: 100%;
+    padding: 0 24px;
+    display: none;
+  }
+  #result-wrapper.visible { display: block; }
+
+  .result-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .result-meta .query-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    color: var(--text);
+    font-size: 0.85rem;
+  }
+  .source-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .source-chip {
+    background: rgba(79,126,247,0.12);
+    border: 1px solid rgba(79,126,247,0.3);
+    color: var(--accent);
+    border-radius: 12px;
+    padding: 2px 10px;
+    font-size: 0.78rem;
+  }
+
+  /* ── GENERATED DOC STYLES ── */
+  #doc-output {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 36px 40px;
+    line-height: 1.7;
+  }
+
+  #doc-output .doc-header {
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+  }
+  #doc-output .doc-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    -webkit-text-fill-color: unset;
+    background: none;
+  }
+  #doc-output .doc-header .meta {
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  #doc-output .doc-section {
+    margin-bottom: 32px;
+  }
+  #doc-output .doc-section h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #doc-output .doc-section h2::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 18px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  #doc-output .doc-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 18px 0 10px;
+  }
+  #doc-output p { margin-bottom: 12px; color: var(--text); }
+
+  /* callouts */
+  #doc-output .callout {
+    border-left: 4px solid;
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    margin: 18px 0;
+    font-size: 0.93rem;
+  }
+  #doc-output .callout.danger {
+    border-color: var(--danger);
+    background: rgba(231,76,60,0.08);
+    color: #f5a49a;
+  }
+  #doc-output .callout.warn {
+    border-color: var(--warn);
+    background: rgba(243,156,18,0.08);
+    color: #f5cc7a;
+  }
+  #doc-output .callout.info {
+    border-color: var(--info);
+    background: rgba(41,128,185,0.08);
+    color: #7ac6f5;
+  }
+  #doc-output .callout.success {
+    border-color: var(--success);
+    background: rgba(39,174,96,0.08);
+    color: #7afaa8;
+  }
+  #doc-output .callout strong { display: block; margin-bottom: 4px; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.06em; }
+
+  /* steps — counter lives on doc-section so it persists across multiple step-lists */
+  #doc-output .doc-section {
+    counter-reset: step;
+  }
+  #doc-output .step-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  #doc-output .step-item {
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    column-gap: 12px;
+    margin-bottom: 16px;
+  }
+  #doc-output .step-item::before {
+    counter-increment: step;
+    content: counter(step);
+    grid-column: 1;
+    grid-row: 1;
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #fff;
+    justify-self: center;
+    margin-top: 2px;
+  }
+  /* ALL direct children go into column 2 — prevents any child from
+     auto-placing back into column 1 (32px) and going one-char-per-line */
+  #doc-output .step-item > * {
+    grid-column: 2;
+    min-width: 0;
+  }
+  /* phase label sits between steps inside a step-list */
+  #doc-output .step-phase {
+    background: var(--surface2);
+    border-left: 3px solid var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 8px 14px;
+    border-radius: 0 6px 6px 0;
+    margin: 8px 0 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* tables */
+  #doc-output .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 0.9rem;
+  }
+  #doc-output .data-table th {
+    background: var(--surface2);
+    color: var(--accent);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+  #doc-output .data-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  #doc-output .data-table tr:hover td { background: var(--surface2); }
+
+  /* images */
+  #doc-output .img-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 14px 0;
+    background: var(--surface2);
+    display: inline-block;
+    max-width: 100%;
+  }
+  #doc-output .img-card img {
+    max-width: 100%;
+    display: block;
+  }
+  #doc-output .img-card figcaption {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  /* source tag */
+  #doc-output .source-tag {
+    display: inline-block;
+    background: rgba(79,126,247,0.1);
+    border: 1px solid rgba(79,126,247,0.25);
+    color: var(--muted);
+    border-radius: 10px;
+    padding: 1px 8px;
+    font-size: 0.74rem;
+    margin-left: 6px;
+  }
+
+  /* knowledge gap */
+  #doc-output .knowledge-gap {
+    background: rgba(243,156,18,0.06);
+    border: 1px dashed var(--warn);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 18px 0;
+    font-size: 0.9rem;
+    color: #f5cc7a;
+  }
+  #doc-output .knowledge-gap h4 {
+    color: var(--warn);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+  }
+
+  /* ul/ol within output */
+  #doc-output ul, #doc-output ol {
+    padding-left: 22px;
+    margin-bottom: 12px;
+  }
+  #doc-output li { margin-bottom: 5px; }
+
+  /* code */
+  #doc-output code {
+    background: var(--surface2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 0.88em;
+    color: #a8d8ff;
+  }
+
+  /* ── LOADING STATE ── */
+  .loading-bar {
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    margin-bottom: 20px;
+    animation: pulse-bar 1.5s ease-in-out infinite;
+    transform-origin: left;
+  }
+  @keyframes pulse-bar {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+  }
+
+  /* ── CURSOR blink ── */
+  .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--accent);
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: blink 0.8s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+
+  /* responsive */
+  @media (max-width: 640px) {
+    .hero { padding: 20px 16px; }
+    .hero h1 { font-size: 1.4rem; }
+    #result-wrapper { padding: 0 8px; }
+    #doc-output { padding: 16px 12px; }
+    .search-box { flex-direction: column; gap: 8px; }
+    .search-box input { width: 100%; }
+    .search-box button { width: 100%; padding: 12px; }
+    /* step grid — tighter on small screens */
+    #doc-output .step-item {
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+    }
+    /* callouts must not overflow viewport */
+    #doc-output .callout {
+      padding: 10px 12px;
+      word-break: break-word;
+    }
+    /* tables scroll horizontally instead of overflowing */
+    #doc-output .data-table {
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      white-space: nowrap;
+    }
+    /* images fit the screen */
+    #doc-output img {
+      max-width: 100%;
+      height: auto;
+    }
+    /* source chips wrap */
+    #source-chips { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">CDLATM <span>Field Docs</span></div>
+</header>
+
+<div class="hero">
+  <h1>Field Service Knowledge Base</h1>
+  <p>Ask any question about ATM service, programming, maintenance, or procedures — get a complete documentation page instantly.</p>
+
+  <div class="search-box">
+    <input type="text" id="query-input" placeholder="e.g. How do I program a 5300 ATM?" autofocus />
+    <button id="generate-btn" onclick="generateDoc()">Generate Docs</button>
+  </div>
+
+  <div class="examples">
+    <span class="label" style="color:var(--muted);font-size:0.82rem;line-height:2;">Try:</span>
+    <button class="example-btn" onclick="setQuery(this)">I found a skimmer</button>
+    <button class="example-btn" onclick="setQuery(this)">5300 programming</button>
+    <button class="example-btn" onclick="setQuery(this)">Coin machine empty steps</button>
+    <button class="example-btn" onclick="setQuery(this)">Theft and damage reporting</button>
+    <button class="example-btn" onclick="setQuery(this)">ATM dispenser removal</button>
+  </div>
+</div>
+
+<div id="result-wrapper">
+  <div class="result-meta">
+    <span>Results for:</span>
+    <span class="query-badge" id="query-display"></span>
+    <div class="source-chips" id="source-chips"></div>
+  </div>
+  <div id="doc-output">
+    <div class="empty-state">
+      <div class="icon">📄</div>
+      <p>Your documentation will appear here</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const input = document.getElementById('query-input');
+  const btn = document.getElementById('generate-btn');
+  const wrapper = document.getElementById('result-wrapper');
+  const output = document.getElementById('doc-output');
+  const queryDisplay = document.getElementById('query-display');
+  const sourceChips = document.getElementById('source-chips');
+
+  // Post-process the HTML Gemini returns to fix structural issues:
+  // 1. Bare text nodes inside .step-item get wrapped in <p> so grid column 2 applies
+  // 2. .step-phase inside a .step-item gets lifted out to sit between items
+  // 3. .callout inside a .step-item gets lifted out to sit after the item
+  function fixStepItems(container) {
+    container.querySelectorAll('.step-item').forEach(item => {
+      // 1. Wrap bare text nodes in <p>
+      Array.from(item.childNodes).forEach(node => {
+        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+          const p = document.createElement('p');
+          p.textContent = node.textContent;
+          item.replaceChild(p, node);
+        }
+      });
+
+      // 2. Lift .step-phase out of the step-item to before it
+      item.querySelectorAll('.step-phase').forEach(phase => {
+        item.parentNode.insertBefore(phase, item);
+      });
+
+      // 3. Lift .callout out of the step-item to after it
+      item.querySelectorAll('.callout').forEach(callout => {
+        item.parentNode.insertBefore(callout, item.nextSibling);
+      });
+    });
+  }
+
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') generateDoc();
+  });
+
+  function setQuery(el) {
+    input.value = el.textContent;
+    input.focus();
+  }
+
+  async function generateDoc() {
+    const query = input.value.trim();
+    if (!query) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Generating…';
+    queryDisplay.textContent = query;
+    sourceChips.innerHTML = '';
+    wrapper.classList.add('visible');
+
+    output.innerHTML = '<div class="loading-bar"></div><p style="color:var(--muted);font-size:0.9rem;" id="progress-msg">Sending full knowledge base to AI and generating documentation…</p>';
+
+    let accumulated = '';
+    let chunkCount = 0;
+
+    try {
+      const resp = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json();
+        output.innerHTML = `<div class="callout danger"><strong>Error</strong>${err.error || 'Unknown error'}</div>`;
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let sourcesData = null;
+
+      while (!done) {
+        const { done: streamDone, value } = await reader.read();
+        if (streamDone) break;
+
+        const lines = decoder.decode(value).split('\n');
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.error) {
+              output.innerHTML = `<div class="callout danger"><strong>Error</strong>${data.error}</div>`;
+              done = true;
+              break;
+            }
+            if (data.done) {
+              sourcesData = data.sources;
+              done = true;
+              break;
+            }
+            if (data.text) {
+              accumulated += data.text;
+              chunkCount++;
+              // Update progress message only — no DOM rewrite of the growing content
+              const msg = document.getElementById('progress-msg');
+              if (msg) msg.textContent = `Receiving response… (${Math.round(accumulated.length / 1024)}KB)`;
+            }
+          } catch(e) {}
+        }
+      }
+
+      // Render once, fully, after streaming is complete
+      if (accumulated) {
+        output.innerHTML = accumulated;
+        fixStepItems(output);
+        if (sourcesData) {
+          sourceChips.innerHTML = sourcesData.map(s =>
+            `<span class="source-chip">📖 ${s}</span>`
+          ).join('');
+        }
+        wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+    } catch (e) {
+      output.innerHTML = `<div class="callout danger"><strong>Error</strong>${e.message}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Generate Docs';
+    }
+  }
+</script>
+</body>
+</html>

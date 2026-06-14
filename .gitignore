@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+venv/
+.venv/
+env/
+
+# Environment & secrets
+.env
+*.enc
+*.key
+
+# Query logs (runtime output — not source code)
+query-logs/
+
+# Raw extracted markdown (large binary-adjacent files, not source)
+# Comment this out if you want them tracked
+raw/
+
+# Chunked markdown (generated from raw/)
+# Comment this out if you want them tracked
+chunks/
+
+# AI knowledge base (generated from chunks/)
+ai-kb/
+
+# Images extracted from PDFs
+images/
+
+# Human-facing generated docs (generated output)
+human-docs/
+
+# Test/prototype pages
+test-page-*.html
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
