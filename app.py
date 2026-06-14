@@ -17,7 +17,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:/
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # ── Database ──────────────────────────────────────────────
-from models import db, User, Document
+from models import db, User, Document, Favorite
 db.init_app(app)
 
 # ── Login manager ─────────────────────────────────────────
@@ -333,6 +333,81 @@ def get_log(date):
             except Exception:
                 pass
     return jsonify({"date": date, "count": len(entries), "entries": entries})
+
+
+# ── Favorites ─────────────────────────────────────────────
+
+@app.route("/api/favorites", methods=["GET"])
+@login_required
+def list_favorites():
+    favs = (Favorite.query
+            .filter_by(user_id=current_user.id)
+            .order_by(Favorite.created_at.desc())
+            .all())
+    return jsonify([{
+        "id": f.id,
+        "query": f.query,
+        "title": f.title,
+        "sources": json.loads(f.sources_json),
+        "created_at": f.created_at.strftime("%b %d, %Y"),
+    } for f in favs])
+
+
+@app.route("/api/favorites", methods=["POST"])
+@login_required
+def save_favorite():
+    data = request.get_json()
+    query = (data.get("query") or "").strip()
+    html_content = (data.get("html_content") or "").strip()
+    sources = data.get("sources") or []
+    title = (data.get("title") or query)[:256]
+
+    if not query or not html_content:
+        return jsonify({"error": "query and html_content are required"}), 400
+
+    # Deduplicate — same user + same query keeps only the newest
+    existing = Favorite.query.filter_by(user_id=current_user.id, query=query).first()
+    if existing:
+        existing.html_content = html_content
+        existing.title = title
+        existing.sources_json = json.dumps(sources)
+        existing.created_at = __import__("datetime").datetime.utcnow()
+        db.session.commit()
+        return jsonify({"id": existing.id, "updated": True})
+
+    fav = Favorite(
+        user_id=current_user.id,
+        query=query,
+        title=title,
+        html_content=html_content,
+        sources_json=json.dumps(sources),
+    )
+    db.session.add(fav)
+    db.session.commit()
+    return jsonify({"id": fav.id, "updated": False}), 201
+
+
+@app.route("/api/favorites/<int:fav_id>", methods=["GET"])
+@login_required
+def get_favorite(fav_id):
+    fav = Favorite.query.filter_by(id=fav_id, user_id=current_user.id).first_or_404()
+    return jsonify({
+        "id": fav.id,
+        "query": fav.query,
+        "title": fav.title,
+        "html_content": fav.html_content,
+        "sources": json.loads(fav.sources_json),
+        "created_at": fav.created_at.strftime("%b %d, %Y"),
+    })
+
+
+@app.route("/api/favorites/<int:fav_id>", methods=["DELETE"])
+@login_required
+def delete_favorite(fav_id):
+    fav = Favorite.query.filter_by(id=fav_id, user_id=current_user.id).first_or_404()
+    db.session.delete(fav)
+    db.session.commit()
+    return jsonify({"deleted": True})
 
 
 # ── Init ──────────────────────────────────────────────────

@@ -65,3 +65,17 @@ class Document(db.Model):
     file_size = db.Column(db.Integer, nullable=False, default=0)
     extracted_text = db.Column(db.Text, nullable=True)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Favorite(db.Model):
+    __tablename__ = "favorites"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    query = db.Column(db.String(512), nullable=False)
+    title = db.Column(db.String(256), nullable=False, default="")
+    html_content = db.Column(db.Text, nullable=False)
+    sources_json = db.Column(db.Text, nullable=False, default="[]")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref=db.backref("favorites", lazy=True, cascade="all, delete-orphan"))

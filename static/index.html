@@ -435,6 +435,143 @@
   }
   .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
 
+  /* ── FAVORITES BUTTON ── */
+  #fav-toggle-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-family: var(--font);
+    transition: border-color 0.15s, color 0.15s;
+    display: none; /* shown via JS once favorites exist */
+  }
+  #fav-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── SAVE BUTTON in result meta ── */
+  #save-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-family: var(--font);
+    transition: all 0.15s;
+    display: none;
+  }
+  #save-btn:hover { border-color: var(--accent); color: var(--accent); }
+  #save-btn.saved { border-color: var(--warn); color: var(--warn); }
+
+  /* ── FAVORITES DRAWER ── */
+  #fav-drawer {
+    position: fixed;
+    top: 0;
+    right: -380px;
+    width: 360px;
+    height: 100vh;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -4px 0 24px rgba(0,0,0,0.4);
+  }
+  #fav-drawer.open { right: 0; }
+
+  #fav-drawer-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  #fav-drawer-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  #fav-drawer-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.3rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.15s;
+  }
+  #fav-drawer-close:hover { color: var(--text); }
+
+  #fav-drawer-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 0;
+  }
+
+  .fav-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.12s;
+  }
+  .fav-item:hover { background: var(--surface2); }
+  .fav-item-body { flex: 1; min-width: 0; }
+  .fav-item-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+  }
+  .fav-item-meta {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .fav-delete-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: color 0.15s;
+    line-height: 1;
+    align-self: center;
+  }
+  .fav-delete-btn:hover { color: var(--danger); }
+
+  #fav-drawer-empty {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  /* drawer overlay */
+  #fav-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 499;
+  }
+  #fav-overlay.visible { display: block; }
+
   /* responsive */
   @media (max-width: 640px) {
     .hero { padding: 20px 16px; }
@@ -477,6 +614,7 @@
   <div class="logo">Dynamic <span>Docs</span></div>
   <div id="header-right" style="display:flex;align-items:center;gap:14px;font-size:0.88rem;color:var(--muted);">
     <span id="header-email" style="color:var(--text)"></span>
+    <button id="fav-toggle-btn" onclick="toggleDrawer()">★ Favorites</button>
     <a id="header-settings" href="/settings" style="color:var(--muted);text-decoration:none;display:none">Settings</a>
     <form action="/logout" method="post" style="margin:0">
       <button type="submit" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:0.82rem;font-family:var(--font);transition:border-color 0.15s,color 0.15s"
@@ -506,12 +644,25 @@
     <span>Results for:</span>
     <span class="query-badge" id="query-display"></span>
     <div class="source-chips" id="source-chips"></div>
+    <button id="save-btn" onclick="saveFavorite()">☆ Save</button>
   </div>
   <div id="doc-output">
     <div class="empty-state">
       <div class="icon">📄</div>
       <p>Your documentation will appear here</p>
     </div>
+  </div>
+</div>
+
+<!-- Favorites drawer -->
+<div id="fav-overlay" onclick="toggleDrawer()"></div>
+<div id="fav-drawer">
+  <div id="fav-drawer-header">
+    <h3>★ Saved Favorites</h3>
+    <button id="fav-drawer-close" onclick="toggleDrawer()" title="Close">✕</button>
+  </div>
+  <div id="fav-drawer-list">
+    <div id="fav-drawer-empty">No favorites saved yet.</div>
   </div>
 </div>
 
@@ -522,8 +673,19 @@
   const output = document.getElementById('doc-output');
   const queryDisplay = document.getElementById('query-display');
   const sourceChips = document.getElementById('source-chips');
+  const saveBtn = document.getElementById('save-btn');
+  const favToggleBtn = document.getElementById('fav-toggle-btn');
+  const favDrawer = document.getElementById('fav-drawer');
+  const favOverlay = document.getElementById('fav-overlay');
+  const favDrawerList = document.getElementById('fav-drawer-list');
+  const favDrawerEmpty = document.getElementById('fav-drawer-empty');
 
-  // Populate header with logged-in user info
+  // Track current result state for saving
+  let currentQuery = '';
+  let currentSources = [];
+  let currentFavId = null; // null = not saved, number = saved with this id
+
+  // ── Header user info ──────────────────────────────────
   fetch('/api/me').then(r => r.json()).then(user => {
     document.getElementById('header-email').textContent = user.email;
     if (user.role === 'admin') {
@@ -531,14 +693,150 @@
     }
   }).catch(() => {});
 
+  // ── Favorites: load list on page load ─────────────────
+  let favoritesCache = [];
 
-  // Post-process the HTML Gemini returns to fix structural issues:
-  // 1. Bare text nodes inside .step-item get wrapped in <p> so grid column 2 applies
-  // 2. .step-phase inside a .step-item gets lifted out to sit between items
-  // 3. .callout inside a .step-item gets lifted out to sit after the item
+  async function loadFavorites() {
+    try {
+      const r = await fetch('/api/favorites');
+      favoritesCache = await r.json();
+      renderFavList();
+      favToggleBtn.style.display = favoritesCache.length > 0 ? 'inline-block' : 'none';
+    } catch(e) {}
+  }
+
+  function renderFavList() {
+    if (!favoritesCache.length) {
+      favDrawerList.innerHTML = '<div id="fav-drawer-empty">No favorites saved yet.</div>';
+      return;
+    }
+    favDrawerList.innerHTML = favoritesCache.map(f => `
+      <div class="fav-item" data-id="${f.id}">
+        <div class="fav-item-body" onclick="loadFavorite(${f.id})">
+          <div class="fav-item-title" title="${escHtml(f.query)}">${escHtml(f.title || f.query)}</div>
+          <div class="fav-item-meta">${escHtml(f.sources.join(', '))} · ${f.created_at}</div>
+        </div>
+        <button class="fav-delete-btn" onclick="deleteFavorite(${f.id}, event)" title="Remove">🗑</button>
+      </div>
+    `).join('');
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Drawer open/close ─────────────────────────────────
+  function toggleDrawer() {
+    const isOpen = favDrawer.classList.contains('open');
+    if (isOpen) {
+      favDrawer.classList.remove('open');
+      favOverlay.classList.remove('visible');
+    } else {
+      loadFavorites(); // refresh list each open
+      favDrawer.classList.add('open');
+      favOverlay.classList.add('visible');
+    }
+  }
+
+  // ── Load a favorite into the result area ──────────────
+  async function loadFavorite(id) {
+    try {
+      const r = await fetch(`/api/favorites/${id}`);
+      const fav = await r.json();
+
+      currentQuery = fav.query;
+      currentSources = fav.sources;
+      currentFavId = fav.id;
+
+      queryDisplay.textContent = fav.query;
+      sourceChips.innerHTML = fav.sources.map(s =>
+        `<span class="source-chip">📖 ${s}</span>`
+      ).join('');
+      output.innerHTML = fav.html_content;
+      fixStepItems(output);
+      wrapper.classList.add('visible');
+
+      setSaveBtnState(true);
+
+      // Close drawer and scroll
+      favDrawer.classList.remove('open');
+      favOverlay.classList.remove('visible');
+      wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch(e) {
+      alert('Failed to load favorite.');
+    }
+  }
+
+  // ── Save current result ───────────────────────────────
+  async function saveFavorite() {
+    if (!currentQuery || !output.innerHTML.includes('doc-header')) return;
+
+    // Extract title from the rendered <h1> inside doc-header
+    const h1 = output.querySelector('.doc-header h1');
+    const title = h1 ? h1.textContent.trim() : currentQuery;
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+
+    try {
+      const r = await fetch('/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: currentQuery,
+          title: title,
+          html_content: output.innerHTML,
+          sources: currentSources,
+        })
+      });
+      const data = await r.json();
+      currentFavId = data.id;
+      setSaveBtnState(true);
+
+      // Refresh favorites list + show header button
+      await loadFavorites();
+    } catch(e) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = '☆ Save';
+    }
+  }
+
+  // ── Delete a favorite ─────────────────────────────────
+  async function deleteFavorite(id, e) {
+    e.stopPropagation();
+    try {
+      await fetch(`/api/favorites/${id}`, { method: 'DELETE' });
+      favoritesCache = favoritesCache.filter(f => f.id !== id);
+      renderFavList();
+      favToggleBtn.style.display = favoritesCache.length > 0 ? 'inline-block' : 'none';
+
+      // If the currently displayed result was this favorite, reset save button
+      if (currentFavId === id) {
+        currentFavId = null;
+        setSaveBtnState(false);
+      }
+    } catch(e) {
+      alert('Failed to delete favorite.');
+    }
+  }
+
+  // ── Save button visual state ──────────────────────────
+  function setSaveBtnState(saved) {
+    saveBtn.disabled = false;
+    if (saved) {
+      saveBtn.textContent = '★ Saved';
+      saveBtn.classList.add('saved');
+      saveBtn.onclick = null; // prevent double-save
+    } else {
+      saveBtn.textContent = '☆ Save';
+      saveBtn.classList.remove('saved');
+      saveBtn.onclick = saveFavorite;
+    }
+  }
+
+  // ── Fix step items (unchanged) ────────────────────────
   function fixStepItems(container) {
     container.querySelectorAll('.step-item').forEach(item => {
-      // 1. Wrap bare text nodes in <p>
       Array.from(item.childNodes).forEach(node => {
         if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
           const p = document.createElement('p');
@@ -546,19 +844,14 @@
           item.replaceChild(p, node);
         }
       });
-
-      // 2. Lift .step-phase out of the step-item to before it
       item.querySelectorAll('.step-phase').forEach(phase => {
         item.parentNode.insertBefore(phase, item);
       });
-
-      // 3. Lift .callout out of the step-item to after it
       item.querySelectorAll('.callout').forEach(callout => {
         item.parentNode.insertBefore(callout, item.nextSibling);
       });
     });
   }
-
 
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') generateDoc();
@@ -578,6 +871,13 @@
     queryDisplay.textContent = query;
     sourceChips.innerHTML = '';
     wrapper.classList.add('visible');
+
+    // Reset save state for new result
+    currentQuery = query;
+    currentSources = [];
+    currentFavId = null;
+    saveBtn.style.display = 'none';
+    setSaveBtnState(false);
 
     output.innerHTML = '<div class="loading-bar"></div><p style="color:var(--muted);font-size:0.9rem;" id="progress-msg">Sending full knowledge base to AI and generating documentation…</p>';
 
@@ -624,7 +924,6 @@
             if (data.text) {
               accumulated += data.text;
               chunkCount++;
-              // Update progress message only — no DOM rewrite of the growing content
               const msg = document.getElementById('progress-msg');
               if (msg) msg.textContent = `Receiving response… (${Math.round(accumulated.length / 1024)}KB)`;
             }
@@ -637,10 +936,20 @@
         output.innerHTML = accumulated;
         fixStepItems(output);
         if (sourcesData) {
+          currentSources = sourcesData;
           sourceChips.innerHTML = sourcesData.map(s =>
             `<span class="source-chip">📖 ${s}</span>`
           ).join('');
         }
+        // Check if this query is already a favorite
+        const existing = favoritesCache.find(f => f.query === query);
+        if (existing) {
+          currentFavId = existing.id;
+          setSaveBtnState(true);
+        } else {
+          setSaveBtnState(false);
+        }
+        saveBtn.style.display = 'inline-block';
         wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
 
@@ -651,6 +960,9 @@
       btn.textContent = 'Generate Docs';
     }
   }
+
+  // Init: load favorites on page load
+  loadFavorites();
 </script>
 </body>
 </html>
