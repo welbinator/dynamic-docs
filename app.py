@@ -340,13 +340,13 @@ def get_log(date):
 @app.route("/api/favorites", methods=["GET"])
 @login_required
 def list_favorites():
-    favs = (Favorite.query
+    favs = (db.session.query(Favorite)
             .filter_by(user_id=current_user.id)
             .order_by(Favorite.created_at.desc())
             .all())
     return jsonify([{
         "id": f.id,
-        "query": f.query,
+        "query": f.search_query,
         "title": f.title,
         "sources": json.loads(f.sources_json),
         "created_at": f.created_at.strftime("%b %d, %Y"),
@@ -366,7 +366,7 @@ def save_favorite():
         return jsonify({"error": "query and html_content are required"}), 400
 
     # Deduplicate — same user + same query keeps only the newest
-    existing = Favorite.query.filter_by(user_id=current_user.id, query=query).first()
+    existing = db.session.query(Favorite).filter_by(user_id=current_user.id, search_query=query).first()
     if existing:
         existing.html_content = html_content
         existing.title = title
@@ -377,7 +377,7 @@ def save_favorite():
 
     fav = Favorite(
         user_id=current_user.id,
-        query=query,
+        search_query=query,
         title=title,
         html_content=html_content,
         sources_json=json.dumps(sources),
@@ -390,10 +390,10 @@ def save_favorite():
 @app.route("/api/favorites/<int:fav_id>", methods=["GET"])
 @login_required
 def get_favorite(fav_id):
-    fav = Favorite.query.filter_by(id=fav_id, user_id=current_user.id).first_or_404()
+    fav = db.session.query(Favorite).filter_by(id=fav_id, user_id=current_user.id).first_or_404()
     return jsonify({
         "id": fav.id,
-        "query": fav.query,
+        "query": fav.search_query,
         "title": fav.title,
         "html_content": fav.html_content,
         "sources": json.loads(fav.sources_json),
@@ -404,7 +404,7 @@ def get_favorite(fav_id):
 @app.route("/api/favorites/<int:fav_id>", methods=["DELETE"])
 @login_required
 def delete_favorite(fav_id):
-    fav = Favorite.query.filter_by(id=fav_id, user_id=current_user.id).first_or_404()
+    fav = db.session.query(Favorite).filter_by(id=fav_id, user_id=current_user.id).first_or_404()
     db.session.delete(fav)
     db.session.commit()
     return jsonify({"deleted": True})

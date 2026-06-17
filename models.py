@@ -72,7 +72,7 @@ class Favorite(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    query = db.Column(db.String(512), nullable=False)
+    query = db.Column("query", db.String(512), nullable=False, key="search_query")
     title = db.Column(db.String(256), nullable=False, default="")
     html_content = db.Column(db.Text, nullable=False)
     sources_json = db.Column(db.Text, nullable=False, default="[]")

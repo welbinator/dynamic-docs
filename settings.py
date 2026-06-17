@@ -138,18 +138,37 @@ def settings_page():
                         dest = uploads_dir() / stored_name
                         dest.write_bytes(file_bytes)
 
-                        extracted = extract_text(file_bytes, ext)
-
+                        # Save the record immediately so the response returns fast.
+                        # Text extraction (especially large PDFs) runs in a background thread.
                         doc = Document(
                             org_id=org.id,
                             original_name=f.filename,
                             stored_name=stored_name,
                             file_type=ext,
                             file_size=len(file_bytes),
-                            extracted_text=extracted,
+                            extracted_text="[Processing… check back in a moment]",
                         )
                         db.session.add(doc)
                         db.session.commit()
+
+                        import threading
+                        _app = current_app._get_current_object()
+                        _doc_id = doc.id
+                        _bytes = file_bytes
+                        _ext = ext
+
+                        def _bg_extract():
+                            with _app.app_context():
+                                try:
+                                    text = extract_text(_bytes, _ext)
+                                except Exception as exc:
+                                    text = f"[Extraction failed: {exc}]"
+                                bg_doc = db.session.get(Document, _doc_id)
+                                if bg_doc:
+                                    bg_doc.extracted_text = text
+                                    db.session.commit()
+
+                        threading.Thread(target=_bg_extract, daemon=True).start()
                         saved = True
 
         elif action == "delete_doc":
