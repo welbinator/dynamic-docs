@@ -93,16 +93,14 @@
   }
   .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
 
+  .btn-icon { display: none; }
+
   @media (max-width: 540px) {
     header { padding: 10px 14px; gap: 8px; }
-    /* hide email on small screens */
     .user-email { display: none; }
-    /* settings → ⚙ icon */
-    .header-settings-link .btn-text { display: none; }
-    .header-settings-link::before { content: '⚙'; }
-    /* logout → ⏻ icon */
-    .logout-btn .btn-text { display: none; }
-    .logout-btn::after { content: '⏻'; font-size: 1rem; }
+    .btn-text { display: none; }
+    .btn-icon { display: inline; }
+    .logout-btn { padding: 5px 10px; }
   }
 
   /* ── AUTH CARD ── */
@@ -377,6 +375,20 @@
     .auth-card { padding: 28px 20px; }
     .settings-card { padding: 20px 16px; }
     .page-wrapper { padding: 24px 12px 60px; }
+
+    /* wrap tables so they scroll instead of overflowing */
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* stack the upload form vertically */
+    .inline-form { flex-direction: column; }
+    .inline-form .btn-save { width: 100%; }
+
+    /* hide less-important columns on mobile */
+    .member-table .col-email,
+    .member-table .col-joined,
+    .doc-table .col-type,
+    .doc-table .col-size,
+    .doc-table .col-date { display: none; }
   }
 </style>
 {% block head %}{% endblock %}
@@ -391,10 +403,10 @@
       <span class="user-email">{{ current_user.email }}</span>
       {% block header_extra %}{% endblock %}
       {% if current_user.is_admin %}
-        <a href="/settings" class="header-settings-link"><span class="btn-text">Settings</span></a>
+        <a href="/settings" class="header-settings-link"><span class="btn-icon">⚙</span><span class="btn-text">Settings</span></a>
       {% endif %}
       <form action="/logout" method="post" style="margin:0">
-        <button type="submit" class="logout-btn"><span class="btn-text">Log out</span></button>
+        <button type="submit" class="logout-btn"><span class="btn-icon">⏻</span><span class="btn-text">Log out</span></button>
       </form>
     {% endif %}
   </div>

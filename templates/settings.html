@@ -110,32 +110,33 @@
           <input type="file" id="doc_file" name="doc_file" accept=".pdf,.docx,.doc,.txt,.md"
             style="background:var(--input-bg,#0f1117);border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);width:100%;font-family:var(--font);font-size:0.9rem;cursor:pointer" required />
         </div>
-        <button type="submit" class="btn-save" style="white-space:nowrap">Upload</button>
+        <button type="submit" class="btn-save">Upload</button>
       </div>
     </form>
 
     {% if documents %}
-    <table class="member-table">
+    <div class="table-scroll">
+    <table class="member-table doc-table">
       <thead>
         <tr>
           <th>File</th>
-          <th>Type</th>
-          <th>Size</th>
-          <th>Uploaded</th>
+          <th class="col-type">Type</th>
+          <th class="col-size">Size</th>
+          <th class="col-date">Uploaded</th>
           <th></th>
         </tr>
       </thead>
       <tbody>
         {% for doc in documents %}
         <tr>
-          <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ doc.original_name }}">{{ doc.original_name }}</td>
-          <td><span class="role-badge">{{ doc.file_type.upper() }}</span></td>
-          <td style="color:var(--muted);font-size:0.82rem">
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ doc.original_name }}">{{ doc.original_name }}</td>
+          <td class="col-type"><span class="role-badge">{{ doc.file_type.upper() }}</span></td>
+          <td class="col-size" style="color:var(--muted);font-size:0.82rem">
             {% if doc.file_size < 1024 %}{{ doc.file_size }} B
             {% elif doc.file_size < 1048576 %}{{ (doc.file_size / 1024) | round(1) }} KB
             {% else %}{{ (doc.file_size / 1048576) | round(1) }} MB{% endif %}
           </td>
-          <td style="color:var(--muted);font-size:0.82rem">{{ doc.uploaded_at.strftime('%b %-d, %Y') }}</td>
+          <td class="col-date" style="color:var(--muted);font-size:0.82rem">{{ doc.uploaded_at.strftime('%b %-d, %Y') }}</td>
           <td>
             <form method="post" onsubmit="return confirm('Delete {{ doc.original_name }}? This cannot be undone.')">
               <input type="hidden" name="action" value="delete_doc" />
@@ -147,6 +148,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
     {% else %}
     <p style="color:var(--muted);font-size:0.9rem;padding:12px 0">No documents uploaded yet. Upload your first document above to enable AI doc generation.</p>
     {% endif %}
@@ -157,13 +159,14 @@
     <h2>👥 Team Members</h2>
     <p class="card-desc">{{ members | length }} member{{ 's' if members | length != 1 }}.</p>
 
+    <div class="table-scroll">
     <table class="member-table">
       <thead>
         <tr>
           <th>Name</th>
-          <th>Email</th>
+          <th class="col-email">Email</th>
           <th>Role</th>
-          <th>Joined</th>
+          <th class="col-joined">Joined</th>
           <th></th>
         </tr>
       </thead>
@@ -171,9 +174,9 @@
         {% for member in members %}
         <tr>
           <td>{{ member.name }}</td>
-          <td style="color:var(--muted)">{{ member.email }}</td>
+          <td class="col-email" style="color:var(--muted)">{{ member.email }}</td>
           <td><span class="role-badge {{ member.role }}">{{ member.role }}</span></td>
-          <td style="color:var(--muted);font-size:0.82rem">{{ member.created_at.strftime('%b %-d, %Y') }}</td>
+          <td class="col-joined" style="color:var(--muted);font-size:0.82rem">{{ member.created_at.strftime('%b %-d, %Y') }}</td>
           <td>
             {% if member.id != current_user.id %}
             <form method="post" onsubmit="return confirm('Remove {{ member.name }} from the team? They will no longer be able to log in.')">
@@ -189,6 +192,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 
 </div>
