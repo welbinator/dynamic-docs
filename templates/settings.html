@@ -154,6 +154,50 @@
     {% endif %}
   </div>
 
+  <!-- ── USER NOTES ── -->
+  <div class="settings-card">
+    <h2>📋 User Notes</h2>
+    <p class="card-desc">Let technicians add real-world notes to supplement your documentation — error codes, field fixes, tips. Notes are visible to all team members.</p>
+    <form method="post">
+      <input type="hidden" name="action" value="save_notes_settings" />
+
+      <div class="toggle-row" style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px">
+        <div>
+          <div class="option-label" style="font-weight:600;font-size:0.9rem;margin-bottom:2px">Enable User Notes</div>
+          <div class="option-desc" style="font-size:0.82rem;color:var(--muted)">Allow all team members to add and view notes on the main search page.</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" name="user_notes_enabled" value="1" {% if org.user_notes_enabled %}checked{% endif %} />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row" style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px">
+        <div>
+          <div class="option-label" style="font-weight:600;font-size:0.9rem;margin-bottom:2px">Require Admin Approval</div>
+          <div class="option-desc" style="font-size:0.82rem;color:var(--muted)">New notes are hidden from other users until you approve them. You'll see pending notes in the Notes drawer.</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" name="user_notes_require_approval" value="1" {% if org.user_notes_require_approval %}checked{% endif %} />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row" style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px">
+        <div>
+          <div class="option-label" style="font-weight:600;font-size:0.9rem;margin-bottom:2px">Allow Image Attachments</div>
+          <div class="option-desc" style="font-size:0.82rem;color:var(--muted)">Let techs attach a photo to their note (up to 10 MB, jpg/png/gif/webp).</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" name="user_notes_allow_images" value="1" {% if org.user_notes_allow_images %}checked{% endif %} />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <button type="submit" class="btn-save">Save notes settings</button>
+    </form>
+  </div>
+
   <!-- ── TEAM MEMBERS ── -->
   <div class="settings-card">
     <h2>👥 Team Members</h2>

@@ -183,6 +183,13 @@ def settings_page():
                     db.session.commit()
                     saved = True
 
+        elif action == "save_notes_settings":
+            org.user_notes_enabled = request.form.get("user_notes_enabled") == "1"
+            org.user_notes_require_approval = request.form.get("user_notes_require_approval") == "1"
+            org.user_notes_allow_images = request.form.get("user_notes_allow_images") == "1"
+            db.session.commit()
+            saved = True
+
     members = User.query.filter_by(org_id=org.id).order_by(User.created_at).all()
     documents = Document.query.filter_by(org_id=org.id).order_by(Document.uploaded_at.desc()).all()
     invite_url = request.host_url.rstrip("/") + url_for("auth.join", invite_code=org.invite_code)

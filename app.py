@@ -17,7 +17,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:/
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # ── Database ──────────────────────────────────────────────
-from models import db, User, Document, Favorite
+from models import db, User, Document, Favorite, UserNote, NoteUpvote
 db.init_app(app)
 
 # ── Login manager ─────────────────────────────────────────
@@ -39,8 +39,13 @@ app.register_blueprint(settings_bp)
 # ── Paths ─────────────────────────────────────────────────
 UPLOADS_DIR = Path(__file__).parent / "uploads"
 UPLOADS_DIR.mkdir(exist_ok=True)
+NOTE_IMAGES_DIR = Path(__file__).parent / "uploads" / "note-images"
+NOTE_IMAGES_DIR.mkdir(exist_ok=True)
 LOGS_DIR = Path(__file__).parent / "query-logs"
 LOGS_DIR.mkdir(exist_ok=True)
+
+NOTE_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
+NOTE_IMAGE_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
 # ── LLM client cache ──────────────────────────────────────
@@ -152,10 +157,51 @@ def search_docs(query: str, org_id: int) -> list[dict]:
 
 # ── Prompt builder ────────────────────────────────────────
 
-def build_prompt(query: str, chunks: list[dict]) -> str:
+def build_prompt(query: str, chunks: list[dict], notes: list[dict] | None = None) -> str:
     sources_text = ""
     for c in chunks:
         sources_text += f"\n\n--- SOURCE: {c['source']} ---\n{c['content']}"
+
+    notes_section = ""
+    if notes:
+        notes_text = ""
+        for n in notes:
+            tags_str = ", ".join(n.get("tags") or []) or "none"
+            upvotes = n.get("upvote_count", 0)
+            notes_text += (
+                f"\n\n--- TECH NOTE (id={n['id']}, author={n['author_name']}, "
+                f"upvotes={upvotes}, tags=[{tags_str}]) ---\n{n['content']}"
+            )
+        notes_section = f"""
+
+---
+
+TECH NOTES FROM FIELD TECHNICIANS:
+The following notes were added by technicians in your organization. They are real-world observations, fixes, and tips — not from the official manuals. Use BOTH the tags AND the content when deciding relevance to the query. Some notes may be only loosely related; include only those that genuinely add value.
+{notes_text}
+
+If any tech notes are relevant to this query, include them AFTER the main documentation content in this exact HTML structure:
+
+<div class="tech-notes-section">
+  <div class="tech-notes-header">
+    <span class="tech-notes-icon">📋</span>
+    <span>Tech Notes</span>
+    <span class="tech-notes-badge">N</span>
+  </div>
+  <!-- one .tech-note div per relevant note, in order of relevance (most upvoted first if tied) -->
+  <div class="tech-note" data-note-id="ID">
+    <div class="tech-note-body">NOTE CONTENT HERE</div>
+    <div class="tech-note-meta">
+      <span class="tech-note-author">AUTHOR NAME</span>
+      <span class="tech-note-date">DATE</span>
+      <span class="tech-note-tags">TAGS</span>
+      <span class="tech-note-upvotes">👍 N</span>
+    </div>
+  </div>
+</div>
+
+Replace N in the badge with the count of relevant notes included. If NO tech notes are relevant, omit the entire .tech-notes-section block — do not include an empty section.
+"""
 
     return f"""You are a documentation generator for field service technicians.
 
@@ -165,7 +211,7 @@ Below is the relevant content retrieved from the manuals. Use ONLY this content 
 
 SOURCE MATERIAL:
 {sources_text}
-
+{notes_section}
 ---
 
 Generate a complete, professional documentation page in HTML format for this query.
@@ -238,7 +284,12 @@ def stream_llm(prompt: str, provider: str, model: str, api_key: str):
 @app.route("/")
 @login_required
 def index():
-    return render_template("index.html")
+    org = current_user.organization if current_user.is_authenticated else None
+    return render_template(
+        "index.html",
+        notes_enabled=org.user_notes_enabled if org else False,
+        is_admin=current_user.is_admin if current_user.is_authenticated else False,
+    )
 
 
 IMAGES_DIR = Path(__file__).parent / "images"
@@ -277,7 +328,19 @@ def generate():
     if not chunks:
         return jsonify({"error": "No relevant content found in the knowledge base."}), 404
 
-    prompt = build_prompt(query, chunks)
+    # Fetch approved org notes (if feature enabled)
+    notes_for_prompt = None
+    if org.user_notes_enabled:
+        org_notes = (
+            UserNote.query
+            .filter_by(org_id=org.id, approved=True)
+            .order_by(UserNote.created_at.desc())
+            .all()
+        )
+        if org_notes:
+            notes_for_prompt = [n.to_dict(current_user.id) for n in org_notes]
+
+    prompt = build_prompt(query, chunks, notes=notes_for_prompt)
 
     def stream():
         full_output = []
@@ -408,6 +471,125 @@ def delete_favorite(fav_id):
     db.session.delete(fav)
     db.session.commit()
     return jsonify({"deleted": True})
+
+
+# ── User Notes ────────────────────────────────────────────
+
+@app.route("/api/notes", methods=["GET"])
+@login_required
+def list_notes():
+    """Return all approved notes for the org (plus pending ones authored by the current user)."""
+    org = current_user.organization
+    if not org.user_notes_enabled:
+        return jsonify([])
+    notes = (
+        UserNote.query
+        .filter_by(org_id=org.id)
+        .order_by(UserNote.created_at.desc())
+        .all()
+    )
+    result = []
+    for n in notes:
+        if n.approved or n.user_id == current_user.id or current_user.is_admin:
+            d = n.to_dict(current_user.id)
+            result.append(d)
+    return jsonify(result)
+
+
+@app.route("/api/notes", methods=["POST"])
+@login_required
+def create_note():
+    org = current_user.organization
+    if not org.user_notes_enabled:
+        return jsonify({"error": "User notes are disabled for this organization."}), 403
+
+    content = (request.form.get("content") or "").strip()
+    tags_raw = (request.form.get("tags") or "").strip()
+    if not content:
+        return jsonify({"error": "Note content is required."}), 400
+
+    # Parse tags: comma-separated string → clean list
+    tags = [t.strip().lstrip("#") for t in tags_raw.split(",") if t.strip()]
+
+    # Image upload
+    image_filename = None
+    img_file = request.files.get("image")
+    if img_file and img_file.filename:
+        if not org.user_notes_allow_images:
+            return jsonify({"error": "Image attachments are disabled for this organization."}), 403
+        ext = img_file.filename.rsplit(".", 1)[-1].lower() if "." in img_file.filename else ""
+        if ext not in NOTE_IMAGE_EXTENSIONS:
+            return jsonify({"error": f"Unsupported image type .{ext}. Allowed: jpg, jpeg, png, gif, webp"}), 400
+        img_bytes = img_file.read()
+        if len(img_bytes) > NOTE_IMAGE_MAX_BYTES:
+            return jsonify({"error": "Image exceeds 10 MB limit."}), 400
+        image_filename = f"{uuid.uuid4().hex}.{ext}"
+        (NOTE_IMAGES_DIR / image_filename).write_bytes(img_bytes)
+
+    # Auto-approve unless org requires approval
+    approved = not org.user_notes_require_approval
+
+    note = UserNote(
+        org_id=org.id,
+        user_id=current_user.id,
+        content=content,
+        tags_json=json.dumps(tags),
+        image_filename=image_filename,
+        approved=approved,
+    )
+    db.session.add(note)
+    db.session.commit()
+    return jsonify({**note.to_dict(current_user.id), "pending_approval": not approved}), 201
+
+
+@app.route("/api/notes/<int:note_id>", methods=["DELETE"])
+@login_required
+def delete_note(note_id):
+    note = UserNote.query.filter_by(id=note_id, org_id=current_user.org_id).first_or_404()
+    # Only author or admin can delete
+    if note.user_id != current_user.id and not current_user.is_admin:
+        return jsonify({"error": "Not authorized."}), 403
+    # Clean up image file
+    if note.image_filename:
+        img_path = NOTE_IMAGES_DIR / note.image_filename
+        if img_path.exists():
+            img_path.unlink()
+    db.session.delete(note)
+    db.session.commit()
+    return jsonify({"deleted": True})
+
+
+@app.route("/api/notes/<int:note_id>/upvote", methods=["POST"])
+@login_required
+def upvote_note(note_id):
+    note = UserNote.query.filter_by(id=note_id, org_id=current_user.org_id, approved=True).first_or_404()
+    existing = NoteUpvote.query.filter_by(note_id=note_id, user_id=current_user.id).first()
+    if existing:
+        # Toggle off
+        db.session.delete(existing)
+        db.session.commit()
+        return jsonify({"upvoted": False, "upvote_count": note.upvote_count})
+    upvote = NoteUpvote(note_id=note_id, user_id=current_user.id)
+    db.session.add(upvote)
+    db.session.commit()
+    return jsonify({"upvoted": True, "upvote_count": note.upvote_count})
+
+
+@app.route("/api/notes/<int:note_id>/approve", methods=["POST"])
+@login_required
+def approve_note(note_id):
+    if not current_user.is_admin:
+        return jsonify({"error": "Admin only."}), 403
+    note = UserNote.query.filter_by(id=note_id, org_id=current_user.org_id).first_or_404()
+    note.approved = True
+    db.session.commit()
+    return jsonify({"approved": True})
+
+
+@app.route("/uploads/note-images/<path:filename>")
+@login_required
+def serve_note_image(filename):
+    return send_from_directory(str(NOTE_IMAGES_DIR), filename)
 
 
 # ── Init ──────────────────────────────────────────────────
